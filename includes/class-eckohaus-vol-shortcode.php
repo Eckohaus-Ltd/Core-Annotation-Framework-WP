@@ -1,18 +1,28 @@
 <?php
 
+/**
+ * Shortcode handler for [eckohaus_volume].
+ */
+
 class Eckohaus_Vol_Shortcode {
 
+    /**
+     * Register shortcode.
+     */
     public function __construct() {
-        // Register shortcode
         add_shortcode( 'eckohaus_volume', [ $this, 'render_shortcode' ] );
     }
 
+
     /**
-     * Render the shortcode output.
+     * Render shortcode output.
+     *
+     * Example usage:
+     * [eckohaus_volume url="https://…/example.json"]
      */
     public function render_shortcode( $atts ) {
 
-        // Expected shortcode attribute: url=""
+        // Shortcode attributes
         $atts = shortcode_atts(
             [
                 'url' => '',
@@ -20,24 +30,39 @@ class Eckohaus_Vol_Shortcode {
             $atts
         );
 
-        if ( empty( $atts['url'] ) ) {
-            return '<p>No volumetric data URL supplied.</p>';
+        $json_url = trim( $atts['url'] );
+
+        if ( empty( $json_url ) ) {
+            return '<p style="color:#b00;">Eckohaus Viewer: No URL provided.</p>';
         }
 
-        // Enqueue assets (registered by Eckohaus_Vol_Assets)
+        // ---------------------------------------------------------
+        // ENQUEUE ASSETS
+        // (Assets are registered in class-eckohaus-vol-assets.php)
+        // ---------------------------------------------------------
         wp_enqueue_script( 'eckohaus-vol-viewer' );
         wp_enqueue_style( 'eckohaus-vol-style' );
 
-        // Pass URL to JS
+        // Pass JSON URL to viewer.js
         wp_localize_script(
             'eckohaus-vol-viewer',
             'EckohausVolData',
             [
-                'url' => esc_url_raw( $atts['url'] ),
+                'url' => esc_url_raw( $json_url ),
             ]
         );
 
-        // Viewer container
-        return '<div id="eckohaus-vol-container"></div>';
+        // ---------------------------------------------------------
+        // DEBUG + VISIBLE CONTAINER
+        // ---------------------------------------------------------
+        $html  = '<div class="eckohaus-vol-debug" style="padding:12px; border:1px solid #ccc; margin:20px 0;">';
+        $html .= '<strong>Eckohaus Volumetric Viewer shortcode is active.</strong><br>';
+        $html .= 'JSON Source: <code style="font-size:12px;">' . esc_html( $json_url ) . '</code>';
+        $html .= '</div>';
+
+        // Main container for viewer.js to attach to
+        $html .= '<div id="eckohaus-vol-container" style="width:100%; height:400px; border:1px dashed #999; margin-top:10px;"></div>';
+
+        return $html;
     }
 }
