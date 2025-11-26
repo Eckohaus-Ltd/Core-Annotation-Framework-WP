@@ -1,102 +1,75 @@
 <?php
 /**
- * Plugin Name: Eckohaus Volumetric Viewer
- * Plugin URI: https://eckohaus.blog
- * Description: Renders 3D volumetric data exported from Eckohaus scientific repos.
- * Version: 0.1.0
- * Author: Eckohaus
- * Author URI: https://eckohaus.co.uk
+ * Plugin Name:       Eckohaus Volumetric Viewer
+ * Description:       Volumetric JSON viewer integration for Eckohaus projects.
+ * Version:           0.1.0
+ * Author:            Eckohaus Ltd
+ * Text Domain:       eckohaus-volumetric-viewer
  *
- * Co-Author: system operator <wanda@openai.com>
- * Co-Author: system administrator <Corvin Nehal Dhali> <info@eckohaus.co.uk>
- *
- * License: MIT
+ * @package Eckohaus_Volumetric_Viewer
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-/**
- * Register plugin scripts.
- *
- * Using `init` ensures all scripts are registered
- * before any shortcode attempts to enqueue them.
- */
-function eckohaus_vol_register_scripts() {
+// -----------------------------------------------------------------------------
+// Plugin constants
+// -----------------------------------------------------------------------------
 
-    $plugin_url = plugin_dir_url( __FILE__ );
-
-    wp_register_script(
-        'eckohaus-vol-core',
-        $plugin_url . 'assets/js/viewer-core.js',
-        array(),
-        '0.1.0',
-        true
-    );
-
-    wp_register_script(
-        'eckohaus-vol-plotly',
-        $plugin_url . 'assets/js/viewer-plotly.js',
-        array( 'eckohaus-vol-core' ),
-        '0.1.0',
-        true
-    );
-
-    wp_register_script(
-        'eckohaus-vol-three',
-        $plugin_url . 'assets/js/viewer-three.js',
-        array( 'eckohaus-vol-core' ),
-        '0.1.0',
-        true
-    );
+if ( ! defined( 'ECKOHAUS_VOL_VERSION' ) ) {
+    define( 'ECKOHAUS_VOL_VERSION', '0.1.0' );
 }
-add_action( 'init', 'eckohaus_vol_register_scripts' );
 
-/**
- * Shortcode:
- * [eckohaus_volume url="https://..." renderer="plotly"]
- */
-function eckohaus_vol_shortcode( $atts ) {
+if ( ! defined( 'ECKOHAUS_VOL_PLUGIN_DIR' ) ) {
+    define( 'ECKOHAUS_VOL_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+}
 
-    $atts = shortcode_atts(
-        array(
-            'url'       => '',
-            'renderer'  => 'plotly',
-            'container' => 'eckohaus-vol-container'
-        ),
-        $atts,
-        'eckohaus_volume'
-    );
+if ( ! defined( 'ECKOHAUS_VOL_PLUGIN_URL' ) ) {
+    define( 'ECKOHAUS_VOL_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+}
 
-    // Always load core.
-    wp_enqueue_script( 'eckohaus-vol-core' );
+// -----------------------------------------------------------------------------
+// Includes
+// -----------------------------------------------------------------------------
 
-    // Renderer selection.
-    if ( $atts['renderer'] === 'three' ) {
-        wp_enqueue_script( 'eckohaus-vol-three' );
-    } else {
-        wp_enqueue_script( 'eckohaus-vol-plotly' );
+require_once ECKOHAUS_VOL_PLUGIN_DIR . 'includes/class-eckohaus-vol-assets.php';
+
+// If you already have these, keep them; if names differ, just adjust.
+if ( file_exists( ECKOHAUS_VOL_PLUGIN_DIR . 'includes/class-eckohaus-vol-fetcher.php' ) ) {
+    require_once ECKOHAUS_VOL_PLUGIN_DIR . 'includes/class-eckohaus-vol-fetcher.php';
+}
+
+if ( file_exists( ECKOHAUS_VOL_PLUGIN_DIR . 'includes/class-eckohaus-vol-renderer.php' ) ) {
+    require_once ECKOHAUS_VOL_PLUGIN_DIR . 'includes/class-eckohaus-vol-renderer.php';
+}
+
+if ( file_exists( ECKOHAUS_VOL_PLUGIN_DIR . 'includes/class-eckohaus-vol-shortcode.php' ) ) {
+    require_once ECKOHAUS_VOL_PLUGIN_DIR . 'includes/class-eckohaus-vol-shortcode.php';
+}
+
+// -----------------------------------------------------------------------------
+// Bootstrap
+// -----------------------------------------------------------------------------
+
+function eckohaus_vol_bootstrap() {
+
+    // Assets loader.
+    if ( class_exists( 'Eckohaus_Vol_Assets' ) ) {
+        Eckohaus_Vol_Assets::init();
     }
 
-    // Localized JS data.
-    wp_localize_script(
-        'eckohaus-vol-core',
-        'EckohausVolData',
-        array(
-            'url'       => esc_url_raw( $atts['url'] ),
-            'renderer'  => sanitize_text_field( $atts['renderer'] ),
-            'container' => sanitize_html_class( $atts['container'] )
-        )
-    );
+    // If your other classes expose static init() methods, call them here:
+    if ( class_exists( 'Eckohaus_Vol_Shortcode' ) && method_exists( 'Eckohaus_Vol_Shortcode', 'init' ) ) {
+        Eckohaus_Vol_Shortcode::init();
+    }
 
-    // Output container.
-    ob_start();
-    ?>
-    <div id="<?php echo esc_attr( $atts['container'] ); ?>" class="eckohaus-vol-container">
-        <!-- Eckohaus Volumetric Viewer will render here -->
-    </div>
-    <?php
-    return ob_get_clean();
+    if ( class_exists( 'Eckohaus_Vol_Fetcher' ) && method_exists( 'Eckohaus_Vol_Fetcher', 'init' ) ) {
+        Eckohaus_Vol_Fetcher::init();
+    }
+
+    if ( class_exists( 'Eckohaus_Vol_Renderer' ) && method_exists( 'Eckohaus_Vol_Renderer', 'init' ) ) {
+        Eckohaus_Vol_Renderer::init();
+    }
 }
-add_shortcode( 'eckohaus_volume', 'eckohaus_vol_shortcode' );
+add_action( 'plugins_loaded', 'eckohaus_vol_bootstrap' );
