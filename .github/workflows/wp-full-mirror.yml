@@ -17,14 +17,23 @@ jobs:
         with:
           repository: Eckohaus/eckohaus-wp
           token: ${{ secrets.ORG_MIRROR_TOKEN }}
-          fetch-depth: 0 # CRITICAL: 0 fetches all branches and history
+          fetch-depth: 0 # Ensures all history is pulled
 
-      - name: Push Mirror to Eckohaus-Ltd
+      - name: Force-Fetch all Remote Branches
+        run: |
+          # This ensures the runner explicitly creates local tracking branches 
+          # for everything in your personal 'eckohaus-wp' repo.
+          git fetch --all
+          for branch in $(git branch -r | grep -v '\->' | grep 'origin/'); do
+            git branch --track "${branch#origin/}" "$branch" || true
+          done
+
+      - name: Push Full Mirror to UK
         run: |
           git remote add target-uk https://x-access-token:${{ secrets.ORG_MIRROR_TOKEN }}@github.com/Eckohaus-Ltd/Core-Annotation-Framework-WP.git
-          git push --mirror target-uk
+          git push --force --prune target-uk "refs/remotes/origin/*:refs/heads/*"
 
-      - name: Push Mirror to Eckohaus-Indonesia
+      - name: Push Full Mirror to ID
         run: |
           git remote add target-id https://x-access-token:${{ secrets.ORG_MIRROR_TOKEN }}@github.com/Eckohaus-Indonesia/Core-Annotation-Framework-WP.git
-          git push --mirror target-id
+          git push --force --prune target-id "refs/remotes/origin/*:refs/heads/*"
