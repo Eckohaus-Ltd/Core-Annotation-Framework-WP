@@ -1,0 +1,30 @@
+name: Full Modular Framework Mirror
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  mirror-all-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source with All Branches
+        uses: actions/checkout@v4
+        with:
+          repository: Eckohaus/eckohaus-wp
+          token: ${{ secrets.ORG_MIRROR_TOKEN }}
+          fetch-depth: 0 # CRITICAL: 0 fetches all branches and history
+
+      - name: Push Mirror to Eckohaus-Ltd
+        run: |
+          git remote add target-uk https://x-access-token:${{ secrets.ORG_MIRROR_TOKEN }}@github.com/Eckohaus-Ltd/Core-Annotation-Framework-WP.git
+          git push --mirror target-uk
+
+      - name: Push Mirror to Eckohaus-Indonesia
+        run: |
+          git remote add target-id https://x-access-token:${{ secrets.ORG_MIRROR_TOKEN }}@github.com/Eckohaus-Indonesia/Core-Annotation-Framework-WP.git
+          git push --mirror target-id
